@@ -206,7 +206,6 @@ def forecast():
 
 
 @app.route('/bmi', methods=['get', 'post'])
-#@app.route('/bmi')
 def bmi():
     if request.method == 'POST':
         height = float(request.form['height'])
@@ -246,20 +245,29 @@ def bmi():
 @app.route('/update', methods=['GET', 'POST'])
 def update():
     if request.method == 'POST':
-        try:
-            username = request.form['username']
-            user = User.query.filter_by(username=username).first()
-            user.lastname = request.form['lastname']
-            user.email = request.form['email']
-            password = request.form['password']
+        if "username" in session:
+            username = session['username']
+            lastname = request.form['lastname']
+            email = request.form['email']
+            hpassword = request.form['password']
             hashed_password = bcrypt.generate_password_hash(
-                password).decode('utf-8')
-            user.password = hashed_password
-        except IntegrityError:
-            db.session.rollback()
-            raise ValidationError('That email is taken. Please choose a different one.')
-        else:
-            db.session.commit()
+                hpassword).decode('utf-8')
+            password = hashed_password
+
+            print(username)
+            try:
+                cur = connect.cursor()
+                cur.execute(
+                    "UPDATE user SET lastname=?,email=?,password=? WHERE username=?".format(
+                        username),
+                    (lastname, email, password, username,))
+
+                connect.commit()
+            except IntegrityError:
+                session.rollback()
+                raise ValidationError('That email is taken. Please choose a different one.')
+            else:
+                connect.commit()
     return render_template("update.html")
 
 
