@@ -1,28 +1,11 @@
-import sqlite3
 from flask import Flask, flash, session, render_template, redirect
-import sys
 import cgi, os
-
-# from werkzeug import secure_filename
-from werkzeug.utils import secure_filename
-import time
-import collections
-import os.path as op
-from datetime import datetime as dt
 from flask import Flask, render_template, url_for, redirect, request
-from flask_admin.contrib.sqla import ModelView
-from flask_sqlalchemy import SQLAlchemy
-from flask_admin import Admin, form
 from flask import session as login_session
-from flask_login import LoginManager, login_user, logout_user, login_required
-from flask_login import UserMixin, LoginManager, login_user, logout_user, login_required
 from flask_bcrypt import Bcrypt
 import sqlite3
-
 from flask_admin import Admin, form
-
 from flask import Flask, flash, request, redirect, url_for
-from sqlalchemy.exc import IntegrityError
 import requests
 import json
 
@@ -36,6 +19,10 @@ app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
 
 bcrypt = Bcrypt(app)
 
+admin.init_app(app)
+
+UPLOAD_FOLDER = 'static'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 connect = sqlite3.connect(r'C:\Users\Bongeka.Mpofu\DB Browser for SQLite\\weathersql.db', check_same_thread=False)
 
@@ -77,8 +64,6 @@ def login():
         if cur is not None:
             # Get Stored hashed and salted password - Need to change fetch one to only return the one username
             data = cur.fetchone()
-            #print(data)
-            #print(type(data))
             password = data[1]
 
             print(password)
@@ -261,7 +246,6 @@ def update():
                     "UPDATE user SET lastname=?,email=?,password=? WHERE username=?".format(
                         username),
                     (lastname, email, password, username,))
-
                 connect.commit()
             except IntegrityError:
                 session.rollback()
@@ -277,20 +261,35 @@ def terms():
 
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if "username" in login_session:
-        print(login_session['username'])
-        name = login_session['username']
-        user = User.query.filter_by(username=name).first()
-        email = user.email
-        if request.method == 'POST':
-            if 'file1' not in request.files:
-                return 'there is no file1 in form!'
-            file1 = request.files['file1']
-            path1 = os.path.join(app.config['UPLOAD_FOLDER'], file1.filename)
-            file1.save(path1)
-            user.path = path1
-            db.session.commit()
-    return render_template('profile.html', name = name, email=email)
+    if "username" in session:
+        username = session['username']
+        cur = connect.cursor()
+        cur.execute(f"SELECT id, username, email from user WHERE username='{username}'")
+        if cur is not None:
+            # Get Stored hashed and salted password - Need to change fetch one to only return the one username
+            data = cur.fetchone()
+            id = data[0]
+            username = data[1]
+            email = data[2]
+            path=""
+            if request.method == 'POST':
+                if 'file1' not in request.files:
+                    return 'there is no file1 in form!'
+                file1 = request.files['file1']
+                path = os.path.join(app.config['UPLOAD_FOLDER'], file1.filename)
+                file1.save(path)
+                print(path)
+                try:
+                    cur = connect.cursor()
+                    print(path)
+                    cur.execute("UPDATE user SET path=? WHERE username=?".format(username), (path, username,))
+                except:
+                    #session.rollback()
+                    print('User details already exist. Try again ')
+                else:
+                    connect.commit()
+
+    return render_template('profile.html', name = username, email=email, path=path)
 
 
 @app.route('/gdpr/')
@@ -320,12 +319,9 @@ def privacy():
 
 @app.route('/logout')
 def logout():
-    #del login_session['username']
-    session.pop('username', None) 
+    session.pop('username', None)
     return redirect(url_for('login'))
 
 if __name__ == "__main__":
-    #app_dir = op.realpath(os.path.dirname(__file__))
-    #with app.app_context():
-        #db.create_all()
+
     app.run(debug=True)
