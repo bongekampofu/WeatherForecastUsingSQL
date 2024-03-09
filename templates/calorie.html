@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+        <html>
+           <head>
+
+        <script type="text/javascript">
+
+            function gbIndex() {
+                // input from body
+               var gb = Number(document.getElementById("gbin-var").value);
+
+                var gbin = gb;
+                if (gbin < 2.5)
+                    document.getElementById("airc").innerText = "Low Pollution";
+
+                else if (gbin>= 2.7 && gbin <= 10)
+                    document.getElementById("airc").innerText = "Moderate Pollution";
+            }
+        </script>
+         </head>
+         <body>
+            <form action="{{url_for('bmi')}}" method="POST">
+               <label for="city_name">City:</label>
+               <input type="text" name="city_name" required />  <br><br>
+
+                <input type="submit" value="gbIndex" onclick="gbIndex();">
+
+    </form>
+
+<p>Air Quality Index: {{air_quality}}</p>
+            <textarea placeholder="" id="gbin-var"> {{air_quality}} </textarea>
+             <h4>Air Quality is: <span id="airc"> ?</span> </h4>
+
+
+
+    <button><a href="{{url_for('bmi')}}"> View your Body Mass Index</a></button> <br> <br>
+    <a href="/">Back to Home</a>
+
+</body>
+
+</html>

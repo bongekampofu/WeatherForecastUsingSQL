@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+
+</head>
+<body>
+
+<h4>Enter a city to get its weather</h4>
+
+    <form action="{{url_for('forecast')}}" method="POST">
+          <label for="city_name">City:</label>
+          <input type="text" name="city_name" required />  <br><br>
+        <input type="submit" value="Get Weather">
+
+    </form>
+      <p>Region: {{region}}</p>
+
+      <p>Country: {{country}}</p>
+      <p>Time: {{localtime}}</p>
+
+
+    <p>Current Temperature: {{current_temperature}}°C</p>
+
+    <p>Current Wind Degree: {{current_wind}}</p>
+
+     <p>Current Humidity: {{current_humidity}}</p>
+
+      <p>Current Air Index: {{air_quality}}</p>
+
+      <p>Current Weather Description: {{weather_description}}</p>
+
+
+
+    <p>At Risk Individuals: {{risk}}</p>
+
+    <p>General Population: {{general}}</p>
+
+<button><a href="{{url_for('welcome')}}"> Back to Main Page</a></button> <br> <br>
+
+</body>
+</html>

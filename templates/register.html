@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      function termsSubmit() {
+          document.getElementById("submit").disabled = true;
+          }
+      function activateSubmit(element) {
+        var email = document.getElementById('email');
+        var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+
+        if(element.checked) {
+            if (!filter.test(email.value)) {
+                alert('Please provide a valid email address');
+                email.focus;
+                }
+            else {
+          document.getElementById("submit").disabled = false;
+          document.getElementById("terms").value = "true";
+            }
+        }
+       else  {
+        document.getElementById("submit").disabled = true;
+        document.getElementById("terms").value = "false";
+
+      }
+      document.getElementById("submit").addEventListener("click", isChecked);
+  }
+
+</script>
+
+
+
+</head>
+<body onload="termsSubmit()">
+
+      <div class="firstHalf">
+
+        <form method="post">
+          <label for="username">  Username:</label>
+          <input type="text" name="username" required /><br><br>
+          <label for="firstname"> First Name:</label>
+          <input type="text" name="firstname" required /><br><br>
+          <label for="lastname">  Last Name:</label>
+          <input type="text" name="lastname" required /><br><br>
+                      <label for="email">    Email:</label>
+                      <input type="text" name="email" id = "email" required /><br> <br>
+
+
+          <label for="password">   Password:</label>
+          <input type="password" name="password" required /> <br>
+
+
+          <button type="submit" name="submit" id="submit">Register</button>
+
+          <br>
+         <input type="checkbox" name="terms" id="terms" value="" onchange="activateSubmit(this)">  I Agree Terms & Conditions <br> <br>
+        </form>
+          <a href="{{url_for('login')}}">Already have an account ? Login </a> <br><br>
+      </div>
+         LEGAL <br>
+      <ul>
+			<li><a class="nava" href="/">Home</a></li>
+			<li><a class="nava" href="/terms">Terms and Conditions</a></li>
+			<li><a class="nava" href="/gdpr">GDPR</a></li>
+			<li><a class="nava" href="/privacy">Privacy Policy</a></li>
+			<li><a class="nava" href="/intellectual">Intellectual Property</a></li>
+			<li><a class="nava" href="/cookies">Cookie Policy</a></li>
+
+		</ul>
+  </body>
+</html>
