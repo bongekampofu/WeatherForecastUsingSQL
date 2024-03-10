@@ -30,23 +30,22 @@ connect = sqlite3.connect(r'C:\Users\Bongeka.Mpofu\DB Browser for SQLite\\weathe
 connect.execute(
     'CREATE TABLE IF NOT EXISTS role (id INTEGER NOT NULL PRIMARY KEY autoincrement, name TEXT)')
 
+
 connect.execute(
     'CREATE TABLE IF NOT EXISTS user (id INTEGER NOT NULL PRIMARY KEY autoincrement, username VARCHAR NOT NULL UNIQUE, \
 firstname TEXT, lastname TEXT, email NOT NULL UNIQUE, password TEXT, agreed_terms TEXT, regDateTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, path TEXT, role_code INTEGER)')
 
 
 connect.execute(
-    'CREATE TABLE IF NOT EXISTS health (hid INTEGER NOT NULL PRIMARY KEY autoincrement, weight REAL, height REAL, bmi REAL, calories REAL, assess_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)')
+    'CREATE TABLE IF NOT EXISTS health (hid INTEGER NOT NULL PRIMARY KEY autoincrement, weight REAL, height REAL, bmi REAL, calories REAL, assess_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES user (id)\
+                                   )')
+
 
 
 connect.execute(
     'CREATE TABLE IF NOT EXISTS weather (wid INTEGER NOT NULL PRIMARY KEY autoincrement, current_temp REAL, \
 current_pressure  REAL, current_humidity REAL, current_airindex REAL, weather_description REAL, date_taken TIMESTAMP)')
 
-
-connect.execute(
-    'CREATE TABLE IF NOT EXISTS city (city_id INTEGER NOT NULL PRIMARY KEY autoincrement, city_name TEXT, \
- longitude REAL, latitude REAL)')
 
 
 @app.route('/')
@@ -192,6 +191,9 @@ def forecast():
 
 @app.route('/bmi', methods=['get', 'post'])
 def bmi():
+    print("testing bmi")
+    username = session['username']
+    print(username)
     if request.method == 'POST':
         height = float(request.form['height'])
         weight = float(request.form['weight'])
@@ -204,20 +206,20 @@ def bmi():
                 # Get Stored hashed and salted password - Need to change fetch one to only return the one username
                 data = cur.fetchone()
                 id = data[0]
+
                 username = data[1]
                 password = data[2]
                 email = data[3]
-                print(username)
-                print(type(username))
 
                 bmi = float(weight/(height*height))
                 calories = float(request.form['calories'])
                 print("user is is", username)
                 try:
+                    print("im here")
                     cur = connect.cursor()
                     cur.execute(
-                        "INSERT INTO health(weight,height, bmi, calories) VALUES (?,?, ?, ?)",
-                          (weight, height, bmi, calories))
+                        "INSERT INTO health(weight,height, bmi, calories, user_id) VALUES (?,?, ?, ?, ?)",
+                          (weight, height, bmi, calories,id))
                 except IntegrityError:
                     session.rollback()
 
@@ -263,11 +265,18 @@ def terms():
 def profile():
     if "username" in session:
         username = session['username']
+        print(username)
         cur = connect.cursor()
         cur.execute(f"SELECT id, username, email from user WHERE username='{username}'")
+
+        data = cur.fetchone()
+        print("hellos first", data)
+        #cur.execute(f"SELECT id, username, email, height, weight, bmi from user INNER JOIN health ON health.hid = user.id WHERE username='{username}'")
+
         if cur is not None:
             # Get Stored hashed and salted password - Need to change fetch one to only return the one username
-            data = cur.fetchone()
+            #data = cur.fetchone()
+            #print("hellos ", data)
             id = data[0]
             username = data[1]
             email = data[2]
@@ -288,6 +297,9 @@ def profile():
                     print('User details already exist. Try again ')
                 else:
                     connect.commit()
+        else:
+            error = 'Username not found'
+            return render_template('login.html', error=error)
 
     return render_template('profile.html', name = username, email=email, path=path)
 
