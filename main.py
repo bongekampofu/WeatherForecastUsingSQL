@@ -267,7 +267,7 @@ def profile():
         username = session['username']
         print(username)
         cur = connect.cursor()
-        cur.execute(f"SELECT id, username, email from user WHERE username='{username}'")
+        cur.execute(f"SELECT id, username, email, path from user WHERE username='{username}'")
 
         data = cur.fetchone()
         print("hellos first", data)
@@ -275,12 +275,12 @@ def profile():
 
         if cur is not None:
             # Get Stored hashed and salted password - Need to change fetch one to only return the one username
-            #data = cur.fetchone()
-            #print("hellos ", data)
+
             id = data[0]
             username = data[1]
             email = data[2]
-            path=""
+            path = data[3]
+
             if request.method == 'POST':
                 if 'file1' not in request.files:
                     return 'there is no file1 in form!'
