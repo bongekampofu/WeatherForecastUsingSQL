@@ -30,6 +30,9 @@ connect = sqlite3.connect(r'C:\Users\Bongeka.Mpofu\DB Browser for SQLite\\weathe
 connect.execute(
     'CREATE TABLE IF NOT EXISTS role (id INTEGER NOT NULL PRIMARY KEY autoincrement, name TEXT)')
 
+connect.execute(
+    'CREATE TABLE IF NOT EXISTS messages(username TEXT, subject TEXT, message TEXT)')
+
 
 connect.execute(
     'CREATE TABLE IF NOT EXISTS user (id INTEGER NOT NULL PRIMARY KEY autoincrement, username VARCHAR NOT NULL UNIQUE, \
@@ -323,10 +326,18 @@ def js():
 def rating():
     return render_template('rating.html')
 
+@app.route('/graph/')
+def graph():
+    return render_template('graph.html')
+
 
 @app.route('/privacy/')
 def privacy():
     return render_template('privacy.html')
+
+@app.route('/contact/')
+def contact():
+    return render_template('contact.html')
 
 
 @app.route('/logout')
