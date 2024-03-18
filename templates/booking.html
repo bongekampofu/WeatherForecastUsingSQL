@@ -1,0 +1,42 @@
+<html lang="en">
+<head>
+
+</head>
+Book - {{eventName}}
+
+
+
+<div class="container" centered>
+    <form action="{{ '/book/%s'%eventID|urlencode }}" method="post" name="book">
+        <div class="form-group">
+            <p><span style="font-size:14px">Event Type:</span> {{ type }}</p>
+            <h3>{{eventName}}</h3><br>
+            <p>{{description}}</p><br>
+            <p>Event Starts: {{ startDate }} at {{ startTime }}</p>
+            <p>Event Ends: {{ endDate }} at {{ endTime }}</p>
+
+            <br>
+            <p>Name on the ticket: <span><strong>{{firstname}} {{lastname}}</strong></span></p>
+            <p>Email address: <span><strong>{{email}}</strong></span></p>
+        </div>
+        <div>
+                <label for="birthday">Booking Date:</label>
+                <input type="date"  id="bookdate" name="bookdate">
+
+
+        </div>
+        <div class="form-box">
+            <label for="numberTickets">Number of tickets: </label>
+            <select name="tickets">
+                {% for i in range(ticketsLeft) %}
+                <option value="{{i+1}}">{{i + 1}}</option>
+                {% endfor %}
+            </select>
+        </div><br>
+        <div class="form-box">
+            <button class="btn btn-success" type="submit" id="post">Book</button>
+        </div>
+    </form>
+</div>
+
+</html>

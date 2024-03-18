@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    {% block javascripts %}
+
+  <script>
+
+  </script>
+
+{% endblock javascripts %}
+
+</head>
+<body>
+ <canvas id="barChart"></canvas>
+    <script>
+       var ctx = document.getElementById("barChart").getContext("2d");
+       var lineChart = new Chart(ctx,{
+           type:"bar",
+           data:{
+               labels:  ['a', 'b', 'c', 'd'],
+            datasets:[{
+                    label: "Emotion",
+                    data: {{ values | safe }},
+                    backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f"],
+                }]
+           },
+       })
+    </script>
+</body>
+</html>
