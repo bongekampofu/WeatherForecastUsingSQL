@@ -8,31 +8,58 @@ from flask_admin import Admin, form
 from flask import Flask, flash, request, redirect, url_for
 import requests
 import json
-
 from typing import Union, Type
+import os
 
-admin = Admin()
+#from cs50 import SQL
+from flask import Flask, flash, json, jsonify, redirect, render_template, request, session
+from flask_session import Session
+from tempfile import mkdtemp
+from datetime import datetime
+from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
+from werkzeug.security import check_password_hash, generate_password_hash
+#from helpers import apology, passwordValid
+#from flask_login import login_required, passwordValid
+from flask_login import login_required
+from flask_login import UserMixin, LoginManager, login_user, logout_user, login_required
+#import requests
+import urllib.parse
+
+from flask import redirect, render_template, request, session
+from functools import wraps
+
+
+
 app = Flask(__name__, static_folder='static')
 app.secret_key = 'any random string'
-# see http://bootswatch.com/3/ for available swatches
-app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
 
+
+login_manager = LoginManager(app)
 bcrypt = Bcrypt(app)
+login_manager.init_app(app)
 
-admin.init_app(app)
 
 UPLOAD_FOLDER = 'static'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-connect = sqlite3.connect(r'C:\Users\Bongeka.Mpofu\DB Browser for SQLite\\weathersql.db', check_same_thread=False)
+@login_manager.user_loader
+def load_user(id):
+    return User.query.get(int(id))
 
+connect = sqlite3.connect(r'C:\Users\Bongeka.Mpofu\DB Browser for SQLite\\healthAdvice.db', check_same_thread=False)
 
+#connect = SQL('sqlite:///C:\\Users\\Bongeka.Mpofu\\DB Browser for SQLite\\healthAdvice.db')
 connect.execute(
     'CREATE TABLE IF NOT EXISTS role (id INTEGER NOT NULL PRIMARY KEY autoincrement, name TEXT)')
 
 connect.execute(
     'CREATE TABLE IF NOT EXISTS messages(username TEXT, subject TEXT, message TEXT)')
 
+connect.execute('CREATE TABLE IF NOT EXISTS transactions (transactID INTEGER NOT NULL PRIMARY KEY autoincrement, userID INTEGER NOT NULL, eventID INTEGER NOT NULL, tickets INTEGER NOT NULL, transTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP, dateBooked TIMESTAMP)')
+
+
+#connect.execute('CREATE TABLE IF NOT EXISTS events (eventID INTEGER NOT NULL, eventName VARCHAR NOT NULL, ticketsLeft INTEGER NOT NULL, type VARCHAR NOT NULL, startDate date NOT NULL, endDate date NOT NULL, description VARCHAR NOT NULL, venueID INTEGER NOT NULL, adminID	INTEGER NOT NULL, endTime time NOT NULL, startTime time NOT NULL )')
+connect.execute('CREATE TABLE IF NOT EXISTS events (eventID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, eventName VARCHAR NOT NULL,ticketsLeft INTEGER NOT NULL, type VARCHAR NOT NULL, startDate date NOT NULL, endDate date NOT NULL, description VARCHAR NOT NULL, venueID INTEGER NOT NULL,adminID INTEGER NOT NULL, endTime TEXT , startTime TEXT )')
 
 connect.execute(
     'CREATE TABLE IF NOT EXISTS user (id INTEGER NOT NULL PRIMARY KEY autoincrement, username VARCHAR NOT NULL UNIQUE, \
@@ -42,19 +69,54 @@ firstname TEXT, lastname TEXT, email NOT NULL UNIQUE, password TEXT, agreed_term
 connect.execute(
     'CREATE TABLE IF NOT EXISTS health (hid INTEGER NOT NULL PRIMARY KEY autoincrement, weight REAL, height REAL, bmi REAL, calories REAL, assess_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, user_id INTEGER NOT NULL, FOREIGN KEY (user_id) REFERENCES user (id)\
                                    )')
-
-
-
 connect.execute(
     'CREATE TABLE IF NOT EXISTS weather (wid INTEGER NOT NULL PRIMARY KEY autoincrement, current_temp REAL, \
 current_pressure  REAL, current_humidity REAL, current_airindex REAL, weather_description REAL, date_taken TIMESTAMP)')
 
 
+connect.execute(
+    'CREATE TABLE IF NOT EXISTS venues (venueID INTEGER NOT NULL PRIMARY KEY autoincrement, venueName VARCHAR NOT NULL,capacity INTEGER NOT NULL,address1 ARCHAR NOT NULL,address2 VARCHAR NOT NULL, city VARCHAR NOT NULL,county VARCHAR NOT NULL,postcode VARCHAR NOT NULL, adminID INTEGER NOT NULL  )')
+
+
+# Both
+venueQry = "SELECT * FROM venues WHERE venueID = :venueID"
+eventQry = "SELECT * FROM events WHERE eventID = :eventID"
+allEventQry = "SELECT * FROM events"
+allVenueQry = "SELECT * FROM venues"
 
 @app.route('/')
 @app.route('/home')
-def option():
-    return render_template('home.html')
+def home():
+    cur = connect.cursor()
+    cur.execute("SELECT * FROM events")
+    events = cur.fetchall()
+    print(events)
+
+    cur.close()
+    #connect.commit()
+
+    #select venues
+    cur = connect.cursor()
+    cur.execute("SELECT * FROM venues")
+    venues = cur.fetchall()
+    print(venues)
+    cur.close()
+    output = []
+    for item in events:
+        dic = {}
+        dic["eventID"] = item[0]
+        dic["eventName"] = item[1]
+        dic["ticketsLeft"] = item[2]
+        dic["type"] = item[3]
+        dic["startDate"] = item[4]
+        dic["endDate"] = item[5]
+        dic["description"] = item[6]
+        output.append(dic)
+    print(output)
+    print(type(output))
+
+    return render_template("home.html", output=output)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -62,18 +124,23 @@ def login():
         username = request.form['username']
         user_entered = request.form['password']
         cur = connect.cursor()
-        cur.execute(f"SELECT username, password from user WHERE username='{username}'")
+        cur.execute(f"SELECT id, username, password from user WHERE username='{username}'")
         if cur is not None:
             # Get Stored hashed and salted password - Need to change fetch one to only return the one username
             data = cur.fetchone()
-            password = data[1]
+            print(data)
+            id = data[0]
+            password = data[2]
 
+            print("user id is ",id)
             print(password)
             print(type(password))
             # Compare Password with hashed password- Bcrypt
             if bcrypt.check_password_hash(password, user_entered):
                 session['logged_in'] = True
                 session['username'] = username
+                session['id'] = id
+
                 flash('You are now logged in', 'success')
                 return redirect(url_for('welcome'))
                 # Close Connection
@@ -87,7 +154,6 @@ def login():
             return render_template('login.html', error=error)
 
     return render_template('login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -108,24 +174,119 @@ def register():
             cur = connect.cursor()
             cur.execute(
                 "INSERT INTO user(username,firstname, lastname, email, password, agreed_terms, path, role_code) VALUES (?,?, ?, ?, ?, ?, ?, ?)", (username, firstname, lastname, email, hashed_password, agreed_terms, path, role_code))
-
-
         except IntegrityError:
             session.rollback()
-
         else:
             connect.commit()
         return redirect(url_for('login'))
     return render_template('register.html')
 
 
+
 @app.route('/welcome')
 def welcome():
     if session:
+        cur = connect.cursor()
+        cur.execute("SELECT * FROM events")
+        events = cur.fetchall()
+        print(events)
 
-        return render_template('welcome.html')
+        cur.close()
+        #connect.commit()
+
+        #select venues
+        cur = connect.cursor()
+        cur.execute("SELECT * FROM venues")
+        venues = cur.fetchall()
+        print(venues)
+        cur.close()
+        output = []
+        for item in events:
+            dic = {}
+            dic["eventID"] = item[0]
+            dic["eventName"] = item[1]
+            dic["ticketsLeft"] = item[2]
+            dic["type"] = item[3]
+            dic["startDate"] = item[4]
+            dic["endDate"] = item[5]
+            dic["description"] = item[6]
+            output.append(dic)
+        print(output)
+        print(type(output))
+
+        return render_template('welcome.html', output=output)
     else:
         return redirect(url_for('login'))
+
+
+
+@app.route("/book/<eventID>", methods=["POST", "GET"])
+#@login_required
+def book(eventID):
+
+    if request.method == "POST":
+
+        id = session.get("id")
+
+        if not request.form.get("tickets"):
+            msg = "no tic"
+            return render_template("error.html", msg=msg)
+        if not eventID:
+            msg = "no id"
+            return render_template("error.html", msg=msg)
+        else:
+            cur = connect.cursor()
+            event = cur.execute(f"SELECT * FROM events WHERE eventID ='{eventID}'")
+            data = cur.fetchone()
+            tLef = data[2]
+            print("original ticket numbers are ", tLef)
+            tic = int(request.form.get("tickets"))
+            print("tickets bought number is ", tic)
+            #tleft = int(tLef - tic)
+            #print("Tickets left ", tLeft)
+            dateBooked = request.form.get("bookdate")
+            print(dateBooked)
+            #print("Tickets left are ", tLeft)
+            cur.execute("INSERT INTO transactions (userID, eventID, tickets, dateBooked) VALUES (?, ?, ?, ?)",(id, eventID, tic, dateBooked))
+            #cur.execute("INSERT INTO health(weight,height, bmi, calories, user_id) VALUES (?,?, ?, ?, ?)",(weight, height, bmi, calories,id))
+
+            cur.execute("UPDATE events SET ticketsLeft = ? WHERE eventID =?", (int(tLef - tic), eventID))
+            connect.commit()
+            msg = "Success!"
+            return render_template("confirmation.html", msg=msg)
+    else:
+        if not eventID:
+            msg = "no id"
+            return render_template("error.html", msg=msg)
+
+        #event = cur.execute(eventQry, eventID=eventID)
+        cur = connect.cursor()
+        event = cur.execute(f"SELECT * FROM events WHERE eventID ='{eventID}'")
+        data = cur.fetchone()
+        print(data)
+        eventID = data[0]
+        eventName = data[1]
+        ticketsLeft = data[2]
+        type = data[3]
+        description = data[6]
+        startDate = data[4]
+        endDate = data[5]
+
+        #id = session['id']
+
+        id=session.get("id")
+
+        usr = cur.execute(f"SELECT * FROM user WHERE id ='{id}'")
+        data = cur.fetchone()
+        print(data)
+        id = data[0]
+        username = data[1]
+        firstname = data[2]
+        lastname = data[3]
+        email = data[4]
+
+        #return render_template("booking.html", event=event, username=username, firstname=firstname, lastname=lastname, email=email)
+        return render_template("booking.html", eventID=eventID, eventName=eventName, ticketsLeft=ticketsLeft, type=type, description=description, startDate=startDate, endDate=endDate, username=username, firstname=firstname, lastname=lastname, email=email)
 
 
 @app.route('/forecast', methods=['GET', 'POST'])
